@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Edit2, Save, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
-function TransactionList({ transactions, deleteTransaction, editTransaction }) {
+function TransactionList({ transactions = [], deleteTransaction, editTransaction }) {
   return (
     <Card className="main-container">
       <CardHeader>
@@ -12,18 +12,20 @@ function TransactionList({ transactions, deleteTransaction, editTransaction }) {
       </CardHeader>
       <CardContent>
         {transactions.length === 0 ? (
-          <div>
-            <div
-              style={{ textAlign: "center", padding: "24px", color: "#666" }}
-            >
-              No transactions yet. Add your first transaction above.
-            </div>
+          <div style={{ textAlign: "center", padding: "24px", color: "#666" }}>
+            No transactions yet. Add your first transaction above.
           </div>
         ) : (
           transactions.map((item) => (
             <TransactionItem
               key={item._id}
-              item={item}
+              item={{
+                _id: item._id, 
+                amount: item.amount || 0,
+                description: item.description || "",
+                type: item.type || "expense",
+                category: item.category || "General",
+              }}
               deleteTransaction={deleteTransaction}
               editTransaction={editTransaction}
             />
@@ -39,13 +41,12 @@ function TransactionItem({ item, deleteTransaction, editTransaction }) {
   const [amount, setAmount] = useState(item.amount);
   const [description, setDescription] = useState(item.description);
   const [type, setType] = useState(item.type);
-  const [category, setCategory] = useState(item.category || "General");
+  const [category, setCategory] = useState(item.category);
 
   const handleEdit = (e) => {
     e.preventDefault();
-
     editTransaction(item._id, {
-      amount: parseFloat(amount),
+      amount: parseFloat(amount) || 0,
       description,
       type,
       category,
@@ -53,12 +54,11 @@ function TransactionItem({ item, deleteTransaction, editTransaction }) {
     setIsEditing(false);
   };
 
+  const transactionDate = item._id ? new Date(parseInt(item._id.toString().substring(0, 8), 16) * 1000) : new Date();
+  const safeAmount = parseFloat(amount) || 0;
+
   return (
-    <Card
-      className={`transaction-card ₹ {
-        item.type === "expense" ? "expense" : "income"
-      }`}
-    >
+    <Card className={`transaction-card ${type === "expense" ? "expense" : "income"}`}>
       <CardContent className="p-6">
         {isEditing ? (
           <form onSubmit={handleEdit} className="main-container">
@@ -87,7 +87,11 @@ function TransactionItem({ item, deleteTransaction, editTransaction }) {
 
               <div>
                 <label>Type</label>
-                <select value={type} onChange={(e) => setType(e.target.value)}>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  className="w-full p-2 border rounded"
+                >
                   <option value="income">Income</option>
                   <option value="expense">Expense</option>
                 </select>
@@ -96,9 +100,9 @@ function TransactionItem({ item, deleteTransaction, editTransaction }) {
               <div>
                 <label>Category</label>
                 <select
-                  id="category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
+                  className="w-full p-2 border rounded"
                 >
                   <option value="General">General</option>
                   <option value="Food">Food</option>
@@ -110,81 +114,57 @@ function TransactionItem({ item, deleteTransaction, editTransaction }) {
               </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "end",
-                gap: "8px",
-              }}
-            >
+            <div className="flex justify-end gap-2 mt-4">
               <Button type="submit" variant="default">
                 <Save className="sub-container-icon-medium" /> Save
               </Button>
-              <Button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                variant="outline"
-              >
+              <Button type="button" onClick={() => setIsEditing(false)} variant="outline">
                 <X className="sub-container-icon-medium" /> Cancel
               </Button>
             </div>
           </form>
         ) : (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-            }}
-          >
+          <div className="flex justify-between items-start">
             <div>
-              <div className="flex-container" style={{ gap: "8px" }}>
+              <div className="flex gap-2 items-center">
                 <span
                   className="sub-text"
-                  style={{
-                    color: item.type === "expense" ? "red" : "green",
-                    fontWeight: 700,
-                  }}
+                  style={{ color: type === "expense" ? "red" : "green", fontWeight: 700 }}
                 >
-                  {item.type === "expense" ? "Expense" : "Income"}
+                  {type === "expense" ? "Expense" : "Income"}
                 </span>
-                <h3 className="sub-text" style={{ fontWeight: 700 }}>
-                  {item.description}
-                </h3>
+                <h3 className="sub-text font-bold">{description || "No description"}</h3>
               </div>
-              <div className="flex-container" style={{ gap: "16px" }}>
+              <div className="flex gap-4 items-center mt-1">
                 <span
                   className="sub-heading-small"
-                  style={{
-                    color: item.type === "expense" ? "red" : "green",
-                  }}
+                  style={{ color: type === "expense" ? "red" : "green" }}
                 >
-                  ₹ {item.amount}
+                  ₹{safeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
-                <span className="sub-text-small" style={{ color: "#666" }}>
-                  {new Date(item._id).toLocaleDateString("en-US", {
+                <span className="sub-text-small text-gray-500">
+                  {transactionDate.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
-                  })}
-                  {" • "}
-                  {new Date(item._id).toLocaleTimeString("en-US", {
+                  })}{" • "}
+                  {transactionDate.toLocaleTimeString("en-US", {
                     hour: "numeric",
-                    minute: "numeric",
+                    minute: "2-digit",
                     hour12: true,
                   })}
                 </span>
-                <span className="sub-text-small">{item.category}</span>
+                <span className="sub-text-small">{category}</span>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="flex gap-2">
               <Button onClick={() => setIsEditing(true)} variant="outline">
                 <Edit2 className="sub-container-icon-medium" />
               </Button>
               <Button
-                onClick={() => deleteTransaction(item._id)}
+                onClick={() => deleteTransaction(item._id)} 
                 variant="outline"
-                className="trash-button"
+                className="hover:bg-red-50"
               >
                 <Trash2 className="sub-container-icon-medium" />
               </Button>
